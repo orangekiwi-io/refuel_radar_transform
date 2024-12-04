@@ -9,6 +9,13 @@ pub fn hello() {
     println!("hello from refuel_radar_transform")
 }
 
+/// Checks structure of input data, not the content
+#[derive(Debug, Deserialize)]
+struct PartialJsonStructure {
+    last_updated: String,             // Ensure this field is a String
+    stations: Vec<serde_json::Value>, // Ensure this field is an array
+}
+
 /// Represents the raw input data structure for petrol station information
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RawStationData {
@@ -92,6 +99,30 @@ pub enum ConversionError {
     /// Represents a JSON parsing error
     #[error("JSON parsing error: {0}")]
     JsonParseError(#[from] serde_json::Error),
+}
+
+/// Process raw station data to the target structure
+///
+/// # Arguments
+///
+/// * `raw_data` - The raw station data to be converted
+///
+/// # Returns
+///
+/// A `Result` containing the converted `StationData` or a `ConversionError`
+pub fn check_json_data_structure(data: &str) -> bool {
+    println!("*** check_json_data_structure");
+    // let bob: PartialJsonStructure = serde_json::from_str(&data).unwrap();
+    // println!("{:#?}", bob);
+
+    let parsed: Result<PartialJsonStructure, _> = serde_json::from_str(data);
+    match parsed {
+        Ok(data_to_check) => {
+            // Ensure the stations array has at least one element
+            !data_to_check.stations.is_empty()
+        }
+        Err(_) => false, // Deserialization failed
+    }
 }
 
 /// Converts raw station data to the target structure
