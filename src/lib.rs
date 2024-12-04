@@ -2,6 +2,7 @@
 
 use chrono::{DateTime, NaiveDateTime, ParseError, Utc};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -27,6 +28,7 @@ pub struct RawStationData {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RawStation {
     pub site_id: String,
+    #[serde(default, deserialize_with = "deserialize_non_null_brand")]
     pub brand: String,
     pub address: String,
     pub postcode: String,
@@ -67,11 +69,20 @@ pub struct StationData {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Station {
     pub site_id: String,
+    #[serde(default, deserialize_with = "deserialize_non_null_brand")]
     pub brand: String,
     pub address: String,
     pub postcode: String,
     pub location: Location,
     pub prices: Vec<PriceEntry>,
+}
+
+fn deserialize_non_null_brand<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let brand = Option::<String>::deserialize(deserializer)?;
+    Ok(brand.unwrap_or_else(|| "Unknown".to_string()))
 }
 
 /// Represents the converted location
@@ -200,15 +211,48 @@ pub fn parse_datetime(dt_str: &str) -> Result<String, ParseError> {
 // pub fn convert_json_data(json_str: &str) -> Result<StationData, ConversionError> {
 pub fn convert_json_data(json_str: &str) {
     println!("*** lib.rs convert_json_data");
-    println!("    json_str {:#?}", json_str);
+    // println!("    json_str {:#?}", json_str);
+    // let bob: RawStationData = serde_json::from_str(json_str).unwrap();
+    // let bob_stations: Vec<RawStation> = bob.stations;
+    // println!("*** bob.stations: {:#?}", bob_stations);
+
+    // Example usage
+    let mut data: Value = serde_json::from_str(json_str).unwrap();
+    filter_stations(&mut data);
+
+    let raw_station_data = RawStationData::try_from(data);
+    println!(
+        "filter_stations convert raw_station_data: {:#?}",
+        raw_station_data
+    );
     // let raw_data: RawStationData = serde_json::from_str(json_str)?;
     // TODO RL. Check data before processing any further.
     // - check last_updated is present
     // - loop through all station information. Exclude any entries that do not pass (brand: null etc)
     // - if price null remove entry
-    let raw_data: RawStationData = serde_json::from_str(json_str).unwrap();
-    println!("*** raw_data: {:#?}", raw_data);
+    // let raw_data: RawStationData = serde_json::from_str(json_str).unwrap();
+    // println!("*** raw_data: {:#?}", raw_data);
     // convert_station_data(raw_data)
+}
+
+fn filter_stations(data: &mut Value) {
+    if let Some(stations) = data.get_mut("stations").and_then(|s| s.as_array_mut()) {
+        stations.retain(|station| {
+            println!("stations.retain prices: {:#?}", station.get("prices"));
+            // let bob = station.get("prices");
+            // println!("bob: {:#?}", bob);
+
+            station.get("brand").map_or(false, |brand| !brand.is_null())
+        });
+    }
+}
+
+impl TryFrom<serde_json::Value> for RawStationData {
+    type Error = serde_json::Error;
+
+    fn try_from(value: serde_json::Value) -> Result<Self, Self::Error> {
+        serde_json::from_value(value)
+    }
 }
 
 pub enum MathsError {
