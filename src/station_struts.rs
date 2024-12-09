@@ -9,6 +9,7 @@ pub struct FuelStationData {
     pub(crate) last_updated: String,
     pub(crate) stations: Vec<serde_json::Value>,
 }
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Location {
     #[serde(deserialize_with = "deserialize_string_to_f64")]
@@ -119,13 +120,13 @@ impl<'de> Deserialize<'de> for StationPrices {
         }
 
         let temp = TempStationPrices::deserialize(deserializer)?;
-
         if temp.brand.is_none() {
             Err(serde::de::Error::custom("brand is null"))
         } else {
+            let brand_name = format_brand(temp.brand.unwrap());
             Ok(StationPrices {
                 site_id: temp.site_id,
-                brand: temp.brand.unwrap(),
+                brand: brand_name,
                 address: temp.address,
                 postcode: temp.postcode,
                 location: temp.location,
@@ -133,4 +134,29 @@ impl<'de> Deserialize<'de> for StationPrices {
             })
         }
     }
+}
+
+fn format_brand(brand: String) -> String {
+    let input_brand = brand.trim().to_lowercase();
+    let output_brand = match input_brand.as_str() {
+        "applegreen" => "Applegreen",
+        "asda express" => "ASDA Express",
+        "asda" => "ASDA",
+        "bp" => "BP",
+        "coop" => "Co Op",
+        "essar" => "Essar",
+        "esso" => "Esso",
+        "gulf" => "Gulf",
+        "harvest energy" => "Harvest Engery",
+        "jet" => "JET",
+        "morrisons" => "Morrisons",
+        "murco" => "Murco",
+        "sainsbury's" => "Sainsbury's",
+        "shell" => "Shell",
+        "tesco" => "Tesco",
+        "texaco" => "Texaco",
+        _ => brand.as_str(),
+    };
+
+    output_brand.to_string()
 }
