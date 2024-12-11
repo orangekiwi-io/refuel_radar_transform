@@ -45,7 +45,9 @@ type PricesHashMap = HashMap<String, f64>;
 pub struct PriceLastUpdated {
     #[serde(flatten)]
     pub prices: PricesHashMap,
-    pub last_updated: String,
+    // Last update (lu) date and time (ISO)
+    // Shortened to lu to reduce file size
+    pub lu: String,
 }
 
 /// Represents a station entry with prices

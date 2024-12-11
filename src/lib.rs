@@ -41,7 +41,7 @@ pub fn process_data(json_data: &str) -> Vec<StationPriceLastUpdated> {
                     location: station.location,
                     prices: vec![PriceLastUpdated {
                         prices: station.prices,
-                        last_updated: last_updated_parsed.to_string(), // Append the last_updated date.
+                        lu: last_updated_parsed.to_string(), // Append the last_updated date.
                     }],
                 }
             })
