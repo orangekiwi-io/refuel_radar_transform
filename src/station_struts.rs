@@ -50,18 +50,26 @@ pub struct PriceLastUpdated {
     pub lu: String,
 }
 
-/// Represents a station entry with prices
-#[derive(Serialize, Clone)]
-pub struct StationPrices {
-    pub(crate) site_id: String,
-    pub(crate) brand: String,
-    pub(crate) address: String,
-    pub(crate) postcode: String,
-    pub(crate) location: Location,
-    pub(crate) prices: PricesHashMap,
-}
-
-/// Represents a station entry with updated prices date
+/// Represents a fuel station's price information with last updated timestamp.
+///
+/// # Structure
+///
+/// Captures comprehensive data about a single fuel station, including:
+/// - Unique site identification
+/// - Brand information
+/// - Location details
+/// - Prices with their last updated timestamp
+///
+/// # Derive Attributes
+///
+/// - `Debug`: Enables convenient debugging and printing
+/// - `Serialize`: Allows conversion to various formats (JSON, etc.)
+/// - `Clone`: Enables deep copying of the entire station data
+///
+/// # Use Case
+///
+/// Designed to store enriched station pricing data with timestamp information,
+/// useful for tracking historical pricing and data updates
 #[derive(Debug, Serialize, Clone)]
 pub struct StationPriceLastUpdated {
     pub site_id: String,
@@ -72,7 +80,41 @@ pub struct StationPriceLastUpdated {
     pub prices: Vec<PriceLastUpdated>,
 }
 
-// Custom deserializer for prices
+/// Custom price deserialization function with robust parsing and filtering.
+///
+/// # Deserialization Strategy
+///
+/// Transforms input data by:
+/// - Converting various input types to floating-point prices
+/// - Filtering out non-positive or invalid price values
+/// - Handling different serialization formats flexibly
+///
+/// # Supported Input Types
+///
+/// Handles price inputs as:
+/// - Numeric values
+/// - String representations of numbers
+///
+/// # Filtering Criteria
+///
+/// - Converts input to f64
+/// - Removes entries with:
+///   * Non-numeric values
+///   * Zero or negative prices
+///
+/// # Performance
+///
+/// - Uses iterator-based transformation
+/// - Minimal memory allocation
+/// - Efficient filtering and conversion
+///
+/// # Examples
+///
+/// ```rust
+/// // Hypothetical JSON input
+/// // {"unleaded": 1.50, "diesel": "1.75", "invalid": "not a number"}
+/// // Result: {"unleaded": 1.50, "diesel": 1.75}
+/// ```
 fn deserialize_prices<'de, D>(deserializer: D) -> Result<PricesHashMap, D::Error>
 where
     D: Deserializer<'de>,
@@ -92,6 +134,42 @@ where
         .collect())
 }
 
+/// Represents a fuel station's detailed information and pricing.
+///
+/// # Structure
+///
+/// Captures comprehensive data about a single fuel station, including:
+/// - Unique site identification
+/// - Brand information
+/// - Location details
+/// - Pricing data
+///
+/// # Derive Attributes
+///
+/// - `Serialize`: Allows the struct to be converted to various formats (JSON, etc.)
+/// - `Clone`: Enables deep copying of the entire station data
+///
+/// # Visibility
+///
+/// All fields are `pub(crate)`, meaning they're accessible within the current crate,
+/// providing a balance between encapsulation and internal flexibility
+#[derive(Serialize, Clone)]
+pub struct StationPrices {
+    pub(crate) site_id: String,
+    pub(crate) brand: String,
+    pub(crate) address: String,
+    pub(crate) postcode: String,
+    pub(crate) location: Location,
+    pub(crate) prices: PricesHashMap,
+}
+
+/// Custom Debug implementation for more controlled logging and debugging.
+///
+/// # Benefits
+///
+/// - Provides a clean, structured debug output
+/// - Allows selective field representation
+/// - Ensures sensitive data can be selectively displayed
 impl std::fmt::Debug for StationPrices {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("StationPrices")
@@ -105,6 +183,19 @@ impl std::fmt::Debug for StationPrices {
     }
 }
 
+/// Custom Deserialization implementation with advanced validation and transformation.
+///
+/// # Deserialization Strategy
+///
+/// 1. Use a temporary struct for initial deserialization
+/// 2. Perform custom validation and transformation
+/// 3. Handle optional fields and apply business logic during deserialization
+///
+/// # Key Features
+///
+/// - Validates brand is not null
+/// - Applies brand name formatting during deserialization
+/// - Provides robust error handling
 impl<'de> Deserialize<'de> for StationPrices {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -138,6 +229,49 @@ impl<'de> Deserialize<'de> for StationPrices {
     }
 }
 
+/// Standardizes and formats brand names to a consistent representation.
+///
+/// This function performs brand name normalization by:
+/// - Trimming whitespace
+/// - Converting to lowercase for matching
+/// - Applying predefined formatting rules
+/// - Preserving original casing for known brands
+///
+/// # Parameters
+///
+/// - `brand`: A `String` containing the brand name to be formatted
+///
+/// # Returns
+///
+/// A `String` with the standardized brand name
+///
+/// # Formatting Rules
+///
+/// - Removes leading and trailing whitespace
+/// - Converts input to lowercase for consistent matching
+/// - Maps specific brand names to their preferred representation
+/// - Maintains original input for unrecognized brands
+///
+/// # Examples
+///
+/// ```rust
+/// assert_eq!(format_brand("bp".to_string()), "BP");
+/// assert_eq!(format_brand("  Sainsbury's  ".to_string()), "Sainsbury's");
+/// assert_eq!(format_brand("unknown brand".to_string()), "unknown brand");
+/// ```
+///
+/// # Brand Mapping
+///
+/// Supports consistent formatting for various fuel station brands:
+/// - "applegreen" → "Applegreen"
+/// - "bp" → "BP"
+/// - "esso" → "Esso"
+/// - ... and many more predefined mappings
+///
+/// # Performance
+///
+/// - O(1) time complexity for brand matching
+/// - Minimal overhead for string processing
 fn format_brand(brand: String) -> String {
     let input_brand = brand.trim().to_lowercase();
     let output_brand = match input_brand.as_str() {
